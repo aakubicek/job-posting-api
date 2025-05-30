@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
 import logging
@@ -7,6 +8,7 @@ import os
 
 from src.models.models import engine
 from src.endpoints.jobs import job_router, company_router
+from src.exceptions import JobDescriptionException, handle_job_description_exception
 
 # Load environment variables
 # load_dotenv()
@@ -17,6 +19,18 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI()
+
+# Global exception handler for JobDescriptionException
+@app.exception_handler(JobDescriptionException)
+async def job_description_exception_handler(request: Request, exc: JobDescriptionException):
+    """
+    Global exception handler for job description generation errors
+    """
+    http_exception = handle_job_description_exception(exc)
+    return JSONResponse(
+        status_code=http_exception.status_code,
+        content=exc.error_detail.model_dump()
+    )
 
 # Include routers
 app.include_router(job_router)
